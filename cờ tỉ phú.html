@@ -1,0 +1,678 @@
+<!DOCTYPE html>  
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>Monopoly Thủ Đức - 200k Salary Edition</title>
+<style>
+  /* --- HỆ THỐNG THEME & BIẾN --- */
+  :root {
+    --bg-body: #cfd8dc;
+    --bg-sidebar: #ffffff;
+    --bg-card: #f5f5f5;
+    --text-main: #263238;
+    --border-color: #37474f;
+    --dice-color: #ffffff; 
+    --pip-color: #000000;  
+    --font-size-base: 13px;
+    --speed-factor: 1;
+  }
+
+  body.dark-mode {
+    --bg-body: #121212;
+    --bg-sidebar: #1e1e1e;
+    --bg-card: #2d2d2d;
+    --text-main: #e0e0e0;
+    --border-color: #546e7a;
+    --dice-color: #263238;
+    --pip-color: #ffffff;
+  }
+
+  body { 
+    margin:0; padding:0; 
+    font-family:"Segoe UI", Tahoma, sans-serif; 
+    display:flex; 
+    background: var(--bg-body); color: var(--text-main);
+    height:100vh; overflow:hidden; 
+    font-size: var(--font-size-base);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* --- LAYOUT CHÍNH --- */
+  .sidebar { 
+    width: 340px; background: var(--bg-sidebar); 
+    border-right: 3px solid var(--border-color);
+    display:flex; flex-direction:column; padding:15px; overflow-y:auto; box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+  }
+  
+  .board-wrapper { flex:1; display:flex; justify-content:center; align-items:center; position:relative; perspective: 1000px; }
+  .board { 
+    width: min(90vmin, 750px); height: min(90vmin, 750px); 
+    display:grid; grid-template-columns: 13% repeat(9, 8.22%) 13%; grid-template-rows: 13% repeat(9, 8.22%) 13%; 
+    background:#fff; border:4px solid var(--border-color); position:relative; 
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    transform-style: preserve-3d;
+  }
+  .dark-mode .cell.has-image { filter: brightness(0.85) contrast(1.1); }
+  .center-decor { grid-column: 2 / 11; grid-row: 2 / 11; background: url('decor.png') center/contain no-repeat; z-index:1; }
+  .cell { border:1px solid #b0bec5; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:9px; font-weight:bold; z-index:2; text-align:center; overflow:hidden; background: #fff; color: #000; transition: background 0.3s; }
+  .cell.has-image { background-size:100% 100%; color:transparent; }
+  .token { position:absolute; font-size:24px; z-index:100; transition: all calc(0.3s / var(--speed-factor)) cubic-bezier(0.25, 0.46, 0.45, 0.94); pointer-events:none; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5)); }
+
+  /* --- CONTROLS & 3D DICE --- */
+  .controls { 
+    position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) translateZ(20px); 
+    z-index:50; text-align:center; background: var(--bg-sidebar); 
+    padding:20px; border-radius:20px; border:3px solid var(--border-color); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  .dice-container { display: flex; gap: 20px; justify-content: center; margin: 15px 0; perspective: 600px; }
+
+  .cube {
+    width: 50px; height: 50px; position: relative; transform-style: preserve-3d;
+    transform: translateZ(-25px); transition: transform 0.5s ease-out;
+  }
+
+  .cube__face {
+    position: absolute; width: 50px; height: 50px; border: 1px solid rgba(0,0,0,0.2);
+    background: var(--dice-color); box-shadow: inset 0 0 5px rgba(0,0,0,0.1); border-radius: 8px;
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+    padding: 5px; box-sizing: border-box;
+  }
+
+  .pip { width: 8px; height: 8px; background: var(--pip-color); border-radius: 50%; align-self: center; justify-self: center; }
+
+  .f1 .pip { grid-area: 2/2; }
+  .f2 .pip:nth-child(1) { grid-area: 1/1; } .f2 .pip:nth-child(2) { grid-area: 3/3; }
+  .f3 .pip:nth-child(1) { grid-area: 1/1; } .f3 .pip:nth-child(2) { grid-area: 2/2; } .f3 .pip:nth-child(3) { grid-area: 3/3; }
+  .f4 .pip:nth-child(1) { grid-area: 1/1; } .f4 .pip:nth-child(2) { grid-area: 1/3; } .f4 .pip:nth-child(3) { grid-area: 3/1; } .f4 .pip:nth-child(4) { grid-area: 3/3; }
+  .f5 .pip:nth-child(1) { grid-area: 1/1; } .f5 .pip:nth-child(2) { grid-area: 1/3; } .f5 .pip:nth-child(3) { grid-area: 3/1; } .f5 .pip:nth-child(4) { grid-area: 3/3; } .f5 .pip:nth-child(5) { grid-area: 2/2; }
+  .f6 .pip:nth-child(1) { grid-area: 1/1; } .f6 .pip:nth-child(2) { grid-area: 2/1; } .f6 .pip:nth-child(3) { grid-area: 3/1; } .f6 .pip:nth-child(4) { grid-area: 1/3; } .f6 .pip:nth-child(5) { grid-area: 2/3; } .f6 .pip:nth-child(6) { grid-area: 3/3; }
+
+  .cube__face--1  { transform: rotateY(  0deg) translateZ(25px); }
+  .cube__face--2  { transform: rotateY( 90deg) translateZ(25px); }
+  .cube__face--3  { transform: rotateY(180deg) translateZ(25px); }
+  .cube__face--4  { transform: rotateY(-90deg) translateZ(25px); }
+  .cube__face--5  { transform: rotateX( 90deg) translateZ(25px); }
+  .cube__face--6  { transform: rotateX(-90deg) translateZ(25px); }
+
+  .cube.is-spinning { animation: spinDice 0.6s linear infinite; }
+  @keyframes spinDice {
+    0% { transform: translateZ(-25px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+    100% { transform: translateZ(-25px) rotateX(360deg) rotateY(720deg) rotateZ(360deg); }
+  }
+
+  .settings-panel { background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+  .setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; font-weight: 600; }
+  .player-card { border:2px solid var(--border-color); border-radius:10px; padding:10px; margin-bottom:10px; background: var(--bg-card); position: relative; }
+  .player-card.active { border-color:#2196f3; background: rgba(33, 150, 243, 0.1); }
+  .player-card.bankrupt { opacity: 0.5; filter: grayscale(1); }
+  .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; justify-content:center; align-items:center; z-index:2000; backdrop-filter: blur(2px); }
+  .modal-content { background: var(--bg-sidebar); color: var(--text-main); padding:25px; border-radius:15px; width:400px; text-align:center; border: 2px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+  button { padding:10px 20px; border:none; border-radius:8px; background:#2196f3; color:#fff; font-weight:bold; cursor:pointer; font-size: 14px; transition: background 0.2s; }
+  button:disabled { background:#b0bec5; cursor:not-allowed; }
+  .asset-item { cursor: pointer; background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 4px; display: inline-block; margin: 2px; }
+  .asset-item:hover { background: #ff5252; color: white; }
+  .cell{
+ position:relative;
+}
+
+.houses{
+ position:absolute;
+ bottom:2px;
+ left:2px;
+ font-size:10px;
+ pointer-events:none;
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2 style="text-align:center; margin:0 0 15px 0;">THỦ ĐỨC CITY</h2>
+  <div class="settings-panel">
+    <div class="setting-item"><span>🌙 Chế độ tối:</span> <input type="checkbox" onchange="document.body.classList.toggle('dark-mode')"></div>
+    <div class="setting-item"><span>🔠 Cỡ chữ:</span> <input type="range" min="11" max="16" value="13" oninput="document.documentElement.style.setProperty('--font-size-base', this.value + 'px')"></div>
+    <div class="setting-item"><span>🚀 Tốc độ:</span> <input type="range" min="0.5" max="3" step="0.5" value="1" oninput="gameSpeed = this.value; document.documentElement.style.setProperty('--speed-factor', this.value)"></div>
+  </div>
+  <div id="assetList" style="flex:1; overflow-y:auto;"></div>
+</div>
+
+<div class="board-wrapper">
+  <div class="board" id="board"><div class="center-decor"></div></div>
+  <div class="controls">
+    <div id="status" style="margin-bottom:10px; font-weight:bold; font-size: 1.1em;">Sẵn sàng!</div>
+    <div class="dice-container">
+      <div class="scene"><div class="cube" id="dice1-cube">
+        <div class="cube__face cube__face--1 f1"><div class="pip"></div></div>
+        <div class="cube__face cube__face--2 f2"><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--3 f3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--4 f4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--5 f5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--6 f6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+      </div></div>
+      <div class="scene"><div class="cube" id="dice2-cube">
+        <div class="cube__face cube__face--1 f1"><div class="pip"></div></div>
+        <div class="cube__face cube__face--2 f2"><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--3 f3"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--4 f4"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--5 f5"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+        <div class="cube__face cube__face--6 f6"><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+      </div></div>
+    </div>
+    <button id="btnRoll" style="width:100%; margin-top:10px; font-size: 16px;">Đổ xúc xắc</button>
+  </div>
+</div>
+
+<div id="setupModal" class="modal" style="display:flex;">
+  <div class="modal-content">
+    <h3>Thiết lập người chơi</h3>
+    <div id="playerConfigs"></div>
+    <button onclick="addConfig()" style="background:#78909c; width:100%; margin-bottom:10px;">+ Thêm</button>
+    <button onclick="startGame()" style="background:#43a047; width:100%;">BẮT ĐẦU</button>
+  </div>
+</div>
+
+<div id="cardModal" class="modal">
+  <div class="modal-content">
+    <h2 id="cardTitle"></h2>
+    <p id="cardDesc" style="line-height: 1.5; font-size: 14px;"></p>
+    <div id="cardOptions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;"></div>
+    <button id="btnCloseCard" style="display:none; width:100%; margin-top: 15px;">Tiếp tục</button>
+  </div>
+</div>
+
+<script>
+let gameSpeed = 1;
+let doubleCount = 0; 
+let currentCardType = null;
+let currentCard = null;
+
+const cells = {
+  0:{name:"BẮT ĐẦU",type:"special"},1:{name:"BƯNG SÁU XÃ",price:200000,rent:[20000,40000],group:"history"},2:{name:"THUẾ CẦU ĐƯỜNG",type:"tax",penalty:50000},3:{name:"BẢO TÀNG ÁO DÀI",price:100000,rent:[10000,20000],group:"history"},4:{name:"ĐIỆN LỰC TĐ",price:150000,rent:[15000],group:"utility"},5:{name:"KHÍ VẬN",type:"khivan"},6:{name:"BÓT DÂY THÉP",price:220000,rent:[25000,50000],group:"history"},7:{name:"VẬN MAY",type:"vanmay"},8:{name:"CHÙA MỘT CỘT",price:100000,rent:[10000,20000],group:"history"},9:{name:"SUỐI TIÊN",price:350000,canBuild:true,housePrice:175000,hotelPrice:875000,rent:[35000,70000,175000,350000,525000,700000,1400000]},10:{name:"THĂM TÙ",type:"special"},11:{name:"NGUYỄN HỮU HUÂN",price:300000,canBuild:true,housePrice:150000,hotelPrice:750000,rent:[30000,60000,150000,300000,450000,600000,1200000]},12:{name:"CHỢ ĐẦM MỐI",price:150000,canBuild:true,housePrice:75000,hotelPrice:375000,rent:[15000,30000,75000,150000,225000,300000,600000]},13:{name:"PHÒNG GD&ĐT",price:150000,rent:[15000],group:"utility"},14:{name:"ĐỀN BẾN NỌC",price:200000,rent:[20000,40000],group:"history"},15:{name:"KHÍ VẬN",type:"khivan"},16:{name:"SNOWTOWN",price:120000,canBuild:true,housePrice:60000,hotelPrice:300000,rent:[12000,24000,60000,120000,180000,240000,480000]},17:{name:"VẬN MAY",type:"vanmay"},18:{name:"VINCOM THẢO ĐIỀN",price:220000,canBuild:true,housePrice:110000,hotelPrice:550000,rent:[22000,44000,110000,220000,330000,440000,880000]},19:{name:"ĐÌNH LINH ĐÔNG",price:160000,rent:[16000,32000],group:"history"},20:{name:"BÃI ĐỖ XE",type:"special"},21:{name:"NHÀ THIẾU NHI",price:220000,canBuild:true,housePrice:110000,hotelPrice:550000,rent:[22000,44000,110000,220000,330000,440000,880000]},22:{name:"KHÍ VẬN",type:"khivan"},23:{name:"CHÙA BỬU LONG",price:160000,rent:[16000,32000],group:"history"},24:{name:"ĐƯỜNG SÁCH TĐ",price:240000,canBuild:true,housePrice:120000,hotelPrice:600000,rent:[24000,48000,120000,240000,360000,480000,960000]},25:{name:"CHỢ THỦ ĐỨC",price:150000,canBuild:true,housePrice:75000,hotelPrice:375000,rent:[15000,30000,75000,150000,225000,300000,600000]},26:{name:"KDL SONG LONG",price:150000,canBuild:true,housePrice:75000,hotelPrice:375000,rent:[15000,30000,75000,150000,225000,300000,600000]},27:{name:"CHÙA BÀ CHÂU ĐỐC 3",price:200000,rent:[20000,40000],group:"history"},28:{name:"VẬN MAY",type:"vanmay"},29:{name:"KHU CÔNG NGHỆ CAO",price:350000,canBuild:true,housePrice:175000,hotelPrice:875000,rent:[35000,70000,175000,350000,525000,700000,1400000]},30:{name:"VÀO TÙ",type:"gotojail"},31:{name:"ĐIỆN LỰC TĐ 2",price:150000,rent:[15000],group:"utility"},32:{name:"CÔNG VIÊN BỜ SÔNG",price:300000,rent:[30000]},33:{name:"VẬN MAY",type:"vanmay"},34:{name:"BẾN TÀU LINH ĐÔNG",price:120000,canBuild:true,housePrice:60000,hotelPrice:300000,rent:[12000,24000,60000,120000,180000,240000,480000]},35:{name:"KHÍ VẬN",type:"khivan"},36:{name:"THUẾ ĐẶC BIỆT",type:"tax",penalty:50000},37:{name:"CÔNG VIÊN LS-VH",price:350000,rent:[35000,70000],group:"history"},38:{name:"RA TÙ FREE",type:"special"},39:{name:"GIGAMALL",price:320000,canBuild:true,housePrice:160000,hotelPrice:800000,rent:[32000,64000,160000,320000,480000,640000,1280000]}
+};
+const groups={history:[1,3,6,8,14,19,23,27,37],utility:[4,13,31]};
+
+// --- DỮ LIỆU THẺ VẬN MAY & KHÍ VẬN MỚI ---
+const vanMayDeck = [
+  {t:"Được thưởng 20000 VNĐ vì đội mũ bảo hiểm chất ngây ngất", a:p=>p.money+=20000},
+  {t:"Bạn chấp hành đúng luật giao thông, về điểm xuất phát an toàn. Thưởng 200000 VNĐ", a:p=>{p.pos=0; p.money+=200000; updateToken(p.id);}},
+  {t:"Đại sứ an toàn giao thông! Mỗi người tặng bạn 50000 VNĐ", a:p=>{
+     players.forEach(op => { if(op.id!==p.id && !op.isBankrupt){ op.money-=50000; p.money+=50000; } });
+  }},
+  {t:"Bạn đang đội mũ bảo hiểm và lái xe an toàn. Thưởng 100000 VNĐ", a:p=>p.money+=100000},
+  {t:"Bạn lái xe an toàn và chở đúng số người quy định. Được tuyên dương khen tặng 200000 VNĐ", a:p=>p.money+=200000},
+  {t:"Bạn tham gia cuộc thi tuyên truyền an toàn giao thông, đạt giải thưởng 300000 VNĐ", a:p=>p.money+=300000},
+  {t:"Ngày may mắn! Bạn nhặt được 50000 VNĐ", a:p=>p.money+=50000},
+  {t:"Bạn chở đúng số người quy định được thưởng 200000 VNĐ", a:p=>p.money+=200000},
+  {t:"Đại sứ an toàn giao thông! Đi thêm 5 bước nữa", a:p=>{ p.pos=(p.pos+5)%40; updateToken(p.id); }},
+  {t:"Bạn đi xem phim với người yêu, cả hai bạn đều đội mũ bảo hiểm nên được thưởng 20000 VNĐ", a:p=>p.money+=20000},
+  {t:"Bá đảo trên từng hạt gạo! Bạn được thưởng ngay một thẻ ra tù miễn phí", a:p=>p.getOutJailFree=(p.getOutJailFree||0)+1},
+  {t:"Vì là bạn thân, bạn được thu 50000 VNĐ từ một người bạn bất kì", a:p=>{
+     let others = players.filter(op => op.id !== p.id && !op.isBankrupt);
+     if(others.length > 0) {
+         let target = others[Math.floor(Math.random()*others.length)];
+         target.money -= 50000; p.money += 50000;
+         alert(`Bạn đã thu 50000 VNĐ từ ${target.name}`);
+     }
+  }},
+  {q:"Khi tham gia giao thông bằng xe máy, người điều khiển xe có bắt buộc đội mũ bảo hiểm không?", o:["Có", "Không"], c:0},
+  {q:"Đèn tín hiệu giao thông màu đỏ có ý nghĩa gì?", o:["Dừng lại", "Đi chậm", "Đi tiếp"], c:0},
+  {q:"Khi tham gia giao thông, có được sử dụng điện thoại di động khi đang lái xe không?", o:["Có", "Không"], c:1},
+  {q:"Biển báo hình tam giác viền đỏ thường có ý nghĩa gì?", o:["Cấm", "Nguy hiểm", "Hiệu lệnh"], c:1},
+  {q:"Người ngồi sau xe máy có cần đội mũ bảo hiểm không?", o:["Không cần", "Chỉ trẻ em mới cần", "Có, phải đội"], c:2},
+  {q:"Xe máy được chở tối đa bao nhiêu người (không tính trẻ em dưới 6 tuổi)?", o:["1", "2", "3"], c:1},
+  {q:"Khi gặp người đi bộ đang qua đường đúng vạch kẻ, bạn phải làm gì?", o:["Bấm còi đi tiếp", "Nhường đường", "Lách nhanh qua"], c:1},
+  {q:"Bao nhiêu tuổi trở lên mới được phép lái xe máy trên 50cc?", o:["16", "18", "20"], c:1},
+  {q:"Uống rượu bia rồi lái xe có được không?", o:["Không được", "Được, nếu uống ít", "Được đi xe chậm"], c:0},
+  {q:"Khi đi xe đạp trời tối, cần có gì để an toàn?", o:["Không cần gì", "Đèn hoặc vật phản quang", "Mặc đồ tối màu"], c:1},
+  {q:"Vì sao cần tuân thủ luật giao thông?", o:["Cho vui", "Để an toàn cho mình và người khác", "Vì ai cũng làm vậy"], c:1}
+];
+
+const khiVanDeck = [
+  {q:"Loại phương tiện nào có quyền ưu tiên khi qua ngã tư?", o:["Người đi bộ", "Xe máy", "Ô tô", "Xe bus"], c:0},
+  {t:"Bạn quên đeo mũ bảo hiểm, bị cảnh sát phạt 50000 VNĐ", a:p=>p.money-=50000},
+  {t:"Bạn đi xe vượt quá tốc độ quy định, bị phạt 200000 VNĐ", a:p=>p.money-=200000},
+  {t:"Bạn đi phượt lại quên mũ bảo hiểm nên bị phạt 200000 VNĐ và quay lại nhà gần nhất", a:p=>{
+     p.money-=200000;
+     for(let steps=1; steps<40; steps++) {
+         let checkPos = (p.pos - steps + 40) % 40;
+         if(cells[checkPos].price) { p.pos = checkPos; break; }
+     }
+     updateToken(p.id);
+  }},
+  {t:"Bạn không đội mũ bảo hiểm và bỏ chạy khi cảnh sát yêu cầu dừng lại, bạn bị phạt tù", a:p=>{p.pos=10; updateToken(p.id);}},
+  {t:"Bạn diễn cảnh gia đình 5 người trên một chiếc xe máy với những người bạn, phạt 100000 VNĐ", a:p=>p.money-=100000},
+  {t:"Mẹ nhắc bạn đội mũ bảo hiểm khi tham gia giao thông giúp bạn tránh bị phạt", a:p=>{}},
+  {t:"Bạn đi ăn sinh nhật bạn thân nhưng không đội mũ bảo hiểm vì sợ làm rối tóc. Bạn gặp cảnh sát và bị phạt 150000 VNĐ", a:p=>p.money-=150000},
+  {t:"Bạn vừa đủ 17 bẻ gãy sừng trâu nhưng lại điều khiển xe trên 50 cc bị phạt 50000 VNĐ và di chuyển tới ô đất TRỤ SỞ PHÒNG GD&ĐT (cell-13)", a:p=>{p.money-=50000; p.pos=13; updateToken(p.id);}},
+  {t:"Bạn đạt giải nhất cuộc thi ATGT nên trúng chuyến đi Châu Âu, mua quần áo hết 200000 VNĐ", a:p=>p.money-=200000},
+  {t:"Bạn không đội mũ bảo hiểm và bị thương ở đầu, băng bó hết 100000 VNĐ", a:p=>p.money-=100000},
+  {q:"Bạn lái xe ô tô, trời mưa đường trơn, phía trước có khúc cua gấp. Bạn nên:", o:["Giảm tốc và đi chậm", "Giữ tốc độ bình thường", "Tăng tốc để sớm qua khúc cua"], c:0},
+  {q:"Khi nghe thấy còi xe cứu thương ưu tiên phía sau, bạn nên:", o:["Đi tiếp bình thường", "Nhường đường cho xe cứu thương", "Tăng tốc để đi nhanh hơn"], c:1},
+  {q:"Biển báo hình tròn viền đỏ, nền trắng có gạch chéo màu đen có nghĩa là gì?", o:["Biển chỉ dẫn", "Biển cấm", "Biển cảnh báo"], c:1},
+  {q:"Khi nào bạn phải bật đèn xi-nhan (đèn báo rẽ)?", o:["Khi muốn rẽ trái hoặc rẽ phải", "Khi dừng xe", "Khi tăng tốc độ"], c:0},
+  {q:"Khi thấy biển báo 'Hạn chế tốc độ 40 km/h', bạn nên:", o:["Đi nhanh hơn để kịp giờ", "Không vượt quá 40 km/h", "Đi bất cứ tốc độ nào miễn an toàn"], c:1},
+  {q:"Xe nào được coi là xe ưu tiên trong giao thông?", o:["Xe tải chở hàng", "Xe buýt", "Xe cứu thương, xe cứu hỏa, xe cảnh sát có phát tín hiệu ưu tiên", "Xe taxi"], c:2}
+];
+
+let players=[], currentPlayerIdx=0;
+const ICONS=["🚗","🚲","🚢","✈️","🚁","🏍️","🏎️","🚄"];
+
+function addConfig(){
+  const id=document.getElementById('playerConfigs').children.length; if(id>=4)return;
+  const div=document.createElement('div'); div.style.cssText="display:flex;gap:8px;margin-bottom:8px;align-items:center;";
+  div.innerHTML=`<span style="font-size:24px">${ICONS[id]}</span><input type="text" id="name-${id}" value="Đại gia ${id+1}" style="flex:1;padding:8px;border-radius:5px;border:1px solid #ccc"><button onclick="toggleBot(this)" style="width:80px">NGƯỜI</button>`;
+  document.getElementById('playerConfigs').appendChild(div);
+}
+addConfig();addConfig();
+function toggleBot(btn){btn.innerText=btn.innerText==="NGƯỜI"?"MÁY":"NGƯỜI";btn.style.background=btn.innerText==="NGƯỜI"?"#2196f3":"#ff5722";}
+
+function startGame(){
+  players=Array.from(document.getElementById('playerConfigs').children).map((row,i)=>({
+    id:i,name:row.querySelector('input').value,icon:ICONS[i],money:400000,pos:0,assets:[],houses:{},
+    isBot:row.querySelector('button').innerText==="MÁY", hasDoubles: false, isBankrupt: false
+  }));
+  document.getElementById('setupModal').style.display='none';
+  initBoard(); 
+  players.forEach((_, i) => updateToken(i)); 
+  updateUI(); nextTurn();
+}
+
+function initBoard(){
+
+  const b=document.getElementById('board')
+  b.innerHTML='<div class="center-decor"></div>'
+
+  for(let i=0;i<40;i++){
+
+    const c=document.createElement('div')
+    c.className='cell'
+    c.id=`cell-${i}`
+
+    let r,col
+    if(i<=10){r=11;col=11-i}
+    else if(i<=20){r=11-(i-10);col=1}
+    else if(i<=30){r=1;col=i-19}
+    else{r=i-29;col=11}
+
+    c.style.gridRow=r
+    c.style.gridColumn=col
+
+    const img=new Image()
+    img.src=`cell-${i}.png`
+
+    img.onload=()=>{
+      c.style.backgroundImage=`url('${img.src}')`
+      c.classList.add('has-image')
+    }
+
+    img.onerror=()=>{
+      c.innerText=cells[i].name
+    }
+
+    // container hiển thị nhà
+    const h=document.createElement("div")
+    h.className="houses"
+    h.id=`houses-${i}`
+    c.appendChild(h)
+
+    b.appendChild(c)
+
+  }
+
+}
+
+function updateToken(pIdx){
+  const p=players[pIdx]; let t=document.getElementById(`token-${pIdx}`);
+  if(p.isBankrupt) { if(t) t.style.display = 'none'; return; }
+  if(!t){t=document.createElement('div');t.id=`token-${pIdx}`;t.className='token';t.innerText=p.icon;document.getElementById('board').appendChild(t)}
+  const cell=document.getElementById(`cell-${p.pos}`), rect=cell.getBoundingClientRect(), bRect=document.getElementById('board').getBoundingClientRect();
+  t.style.left=(rect.left-bRect.left+5+pIdx*4)+'px'; t.style.top=(rect.top-bRect.top+5+pIdx*4)+'px';
+}
+
+async function nextTurn(){
+  const p=players[currentPlayerIdx]; 
+  if(p.isBankrupt) { finishTurn(); return; }
+  document.getElementById('status').innerText=`Lượt: ${p.icon} ${p.name}`; updateUI();
+  if(p.isBot){ document.getElementById('btnRoll').disabled=true; await new Promise(r=>setTimeout(r,1000/gameSpeed)); rollDice(); }
+  else document.getElementById('btnRoll').disabled=false;
+}
+
+document.getElementById('btnRoll').onclick=rollDice;
+
+async function rollDice(){
+  const btn = document.getElementById('btnRoll'); btn.disabled = true;
+  const d1 = Math.floor(Math.random()*6)+1, d2 = Math.floor(Math.random()*6)+1;
+  const cube1 = document.getElementById('dice1-cube'), cube2 = document.getElementById('dice2-cube');
+  cube1.classList.add('is-spinning'); cube2.classList.add('is-spinning');
+  await new Promise(r => setTimeout(r, 600));
+  cube1.classList.remove('is-spinning'); cube2.classList.remove('is-spinning');
+  const rotations = { 1: 'rotateX(0deg) rotateY(0deg)', 2: 'rotateY(-90deg)', 3: 'rotateY(180deg)', 4: 'rotateY(90deg)', 5: 'rotateX(-90deg)', 6: 'rotateX(90deg)' };
+  cube1.style.transform = `translateZ(-25px) ${rotations[d1]}`;
+  cube2.style.transform = `translateZ(-25px) ${rotations[d2]}`;
+  await new Promise(r => setTimeout(r, 400));
+  const p = players[currentPlayerIdx];
+  if (d1 === d2) {
+    doubleCount++;
+    if (doubleCount === 3) {
+      alert("⚠️ ĐỔ TRÙNG 3 LẦN! Bạn bị tống VÀO TÙ!");
+      p.pos = 10; updateToken(currentPlayerIdx); 
+      doubleCount = 0; p.hasDoubles = false; finishTurn(); return;
+    }
+    p.hasDoubles = true;
+    document.getElementById('status').innerText = `🔥 ĐỔ TRÙNG ${d1}! (Lần ${doubleCount}). Thêm lượt!`;
+  } else {
+    doubleCount = 0; p.hasDoubles = false;
+  }
+
+  // --- LOGIC DI CHUYỂN VÀ NHẬN LƯƠNG 200K ---
+  for(let i=0; i<(d1+d2); i++){
+    p.pos=(p.pos+1)%40; 
+    
+    // Kiểm tra nếu đi ngang qua hoặc dừng tại ô BẮT ĐẦU (id 0)
+    if(p.pos === 0) {
+        p.money += 200000;
+        console.log(`${p.name} nhận lương 200.000đ`);
+        updateUI(); // Cập nhật tiền trên bảng ngay lập tức
+    }
+    
+    updateToken(currentPlayerIdx); 
+    await new Promise(r=>setTimeout(r, 250/gameSpeed)); // Đi chậm lại một chút để dễ nhìn
+  }
+  handleLand();
+}
+
+async function handleLand(){
+  const p=players[currentPlayerIdx], land=cells[p.pos];
+  if(land.type==="gotojail"){ p.pos=10; alert("Vào tù!"); updateToken(currentPlayerIdx); finishTurn(); }
+  else if(land.type==="tax"){
+    if(await checkAffordability(p, land.penalty)) { p.money-=land.penalty; alert(`Nộp thuế ${land.penalty}`); }
+    finishTurn();
+  }
+  else if(land.type==="vanmay"||land.type==="khivan") openCard(land.type);
+  else if(land.price){
+    const owner=players.find(pl=>pl.assets.includes(p.pos));
+    if(!owner){
+      if(p.money >= land.price) {
+        if(p.isBot){ if(p.money>land.price+50000){p.money-=land.price;p.assets.push(p.pos)} finishTurn(); }
+        else buyProcess(p,land);
+      } else {
+        if(!p.isBot) alert("Không đủ tiền mua mảnh đất này!");
+        finishTurn();
+      }
+    }
+    else if(owner.id!==p.id) await payRent(p,owner,land);
+    else finishTurn();
+  }else finishTurn();
+}
+
+// --- LOGIC MUA ĐẤT ---
+function buyProcess(p, land) {
+  const m = document.getElementById('cardModal');
+  document.getElementById('cardTitle').innerText = "CƠ HỘI MUA ĐẤT 🏠";
+  document.getElementById('cardDesc').innerText = `Bạn có muốn mua ${land.name} với giá ${land.price.toLocaleString('vi-VN')}đ không?`;
+  document.getElementById('cardOptions').innerHTML = `
+    <button onclick="confirmBuy(true, ${land.price}, ${p.pos})" style="background:#43a047; margin: 5px;">ĐỒNG Ý MUA</button>
+    <button onclick="confirmBuy(false, 0, 0)" style="background:#e53935; margin: 5px;">BỎ QUA</button>
+  `;
+  document.getElementById('btnCloseCard').style.display = "none";
+  m.style.display = "flex";
+}
+
+function confirmBuy(isBuying, price, pos) {
+  if (isBuying) {
+    const p = players[currentPlayerIdx];
+    p.money -= price;
+    p.assets.push(pos);
+  }
+  document.getElementById('cardModal').style.display = "none";
+  finishTurn();
+}
+
+async function payRent(p,owner,land){
+
+  let fee = land.rent[0];
+
+  // nếu có nhà / khách sạn
+  if(land.canBuild && owner.houses && owner.houses[p.pos] !== undefined){
+    fee = land.rent[ owner.houses[p.pos] ];
+  }
+
+  // nếu đủ group
+  else if(land.group && groups[land.group].every(id=>owner.assets.includes(id))){
+    fee = land.rent[1];
+  }
+
+  if(await checkAffordability(p, fee)) {
+    p.money -= fee;
+    owner.money += fee;
+    alert(`${p.name} trả ${fee.toLocaleString()}đ cho ${owner.name}`);
+  }
+
+  finishTurn();
+}
+
+async function checkAffordability(p, amount) {
+  while (p.money < amount && p.assets.length > 0) {
+    if(p.isBot) {
+        let assetToSell = p.assets.pop();
+        p.money += Math.floor(cells[assetToSell].price * 0.5);
+    } else {
+        let choice = confirm(`Bạn không đủ tiền (Cần ${amount.toLocaleString()}đ). Bạn có muốn bán bớt đất không? (50% giá gốc)`);
+        if(choice) {
+            let assetIndex = prompt(`Nhập số thứ tự đất muốn bán (0 đến ${p.assets.length-1}):\n` + p.assets.map((a,i)=>`${i}: ${cells[a].name}`).join('\n'));
+            if(assetIndex !== null && p.assets[assetIndex] !== undefined) {
+                let soldId = p.assets.splice(assetIndex, 1)[0];
+                p.money += Math.floor(cells[soldId].price * 0.5);
+                updateUI();
+            }
+        } else break;
+    }
+  }
+  if (p.money < amount) {
+    alert(`${p.name} đã PHÁ SẢN!`);
+    p.isBankrupt = true; p.money = 0; p.assets = [];
+    updateToken(p.id); return false;
+  }
+  return true;
+}
+
+// --- LOGIC HIỂN THỊ VÀ TRẢ LỜI CÂU HỎI THẺ BÀI ---
+function openCard(type){
+  const p = players[currentPlayerIdx];
+  const deck = type === "vanmay" ? vanMayDeck : khiVanDeck;
+  const card = deck[Math.floor(Math.random() * deck.length)];
+  
+  currentCardType = type;
+  currentCard = card;
+
+  const m = document.getElementById('cardModal');
+  const desc = document.getElementById('cardDesc');
+  m.style.display = "flex"; 
+  document.getElementById('cardTitle').innerText = type === "vanmay" ? "VẬN MAY 🍀" : "KHÍ VẬN ⚡";
+
+  if(p.isBot){
+    desc.innerText = `Máy bốc: ${card.t || card.q}`;
+    if(card.q) {
+        let isCorrect = Math.random() > 0.5; // Bot tỉ lệ 50% đúng sai
+        if(isCorrect) {
+            desc.innerText += `\n\n🤖 Máy chọn đáp án ĐÚNG!`;
+            if(type === "vanmay") p.money += 30000;
+        } else {
+            desc.innerText += `\n\n🤖 Máy chọn đáp án SAI!`;
+            if(type === "khivan") p.money -= 30000;
+        }
+    } else {
+        card.a(p);
+    }
+    updateUI();
+    document.getElementById('btnCloseCard').style.display = "block";
+    document.getElementById('cardOptions').innerHTML = '';
+  } else {
+    desc.innerText = card.t || card.q;
+    if(card.q) {
+        // Nút trắc nghiệm
+        document.getElementById('cardOptions').innerHTML = card.o.map((o, i) => 
+            `<button onclick="answerCardQuiz(${i})" style="margin:4px 0; width:100%; display:block; padding: 12px; background: #607d8b;">${o}</button>`
+        ).join('');
+        document.getElementById('btnCloseCard').style.display = "none";
+    } else {
+        // Hành động tự động
+        card.a(p);
+        updateUI();
+        document.getElementById('cardOptions').innerHTML = '';
+        document.getElementById('btnCloseCard').style.display = "block";
+    }
+  }
+}
+
+function answerCardQuiz(selectedIndex) {
+    const p = players[currentPlayerIdx];
+    if (selectedIndex === currentCard.c) {
+        if (currentCardType === "vanmay") {
+            p.money += 30000;
+            alert("✅ CHÍNH XÁC! Bạn được thưởng 30.000 VNĐ.");
+        } else {
+            alert("✅ CHÍNH XÁC! Bạn đã an toàn khỏi hình phạt.");
+        }
+    } else {
+        if (currentCardType === "vanmay") {
+            alert("❌ SAI RỒI! Rất tiếc, bạn đã bỏ lỡ cơ hội nhận thưởng.");
+        } else {
+            p.money -= 30000;
+            alert("❌ SAI RỒI! Bạn bị phạt 30.000 VNĐ.");
+        }
+    }
+    updateUI();
+    closeCard();
+}
+
+function closeCard(){
+  document.getElementById('cardModal').style.display="none";
+  finishTurn();
+}
+document.getElementById('btnCloseCard').onclick=closeCard;
+
+function finishTurn(){
+  const p = players[currentPlayerIdx];
+  if (!p.isBankrupt && p.hasDoubles) {
+    p.hasDoubles = false; updateUI(); nextTurn();
+  } else {
+    doubleCount = 0; 
+    let count = 0;
+    do {
+        currentPlayerIdx=(currentPlayerIdx+1)%players.length;
+        count++;
+    } while (players[currentPlayerIdx].isBankrupt && count < players.length);
+    
+    if(players.filter(pl=>!pl.isBankrupt).length <= 1) {
+        let winner = players.find(pl=>!pl.isBankrupt);
+        alert(`TRÒ CHƠI KẾT THÚC! NGƯỜI THẮNG CUỘC LÀ: ${winner.name}`);
+        location.reload();
+        return;
+    }
+    updateUI(); nextTurn();
+  }
+}
+function updateHouses(){
+
+  for(let i=0;i<40;i++){
+
+    const el=document.getElementById(`houses-${i}`)
+    if(!el) continue
+
+    let count=0
+
+    players.forEach(p=>{
+      if(p.houses && p.houses[i])
+        count=p.houses[i]
+    })
+
+    if(count==5){
+      el.innerHTML="🏨"
+    }
+    else if(count>0){
+      el.innerHTML="🏠".repeat(count)
+    }
+    else{
+      el.innerHTML=""
+    }
+
+  }
+
+}
+function updateUI(){
+
+  updateHouses()
+
+  document.getElementById('assetList').innerHTML = players.map((p,i)=>{
+
+    let assetsHTML = p.assets.map(a=>{
+
+      let icon = ""
+
+      if(p.houses && p.houses[a] > 0){
+
+        if(p.houses[a] === 5){
+          icon = " 🏨"
+        } 
+        else if(p.houses[a] >= 1 && p.houses[a] <= 4){
+          icon = ` 🏠${p.houses[a]}`
+        }
+
+      }
+
+      return `
+      <div class="asset-item">
+        ${cells[a].name}${icon}
+
+        ${cells[a].canBuild ? `
+        <br>
+        <button onclick="buildHouse(${i},${a})" style="font-size:10px">🏠</button>
+        <button onclick="buildHotel(${i},${a})" style="font-size:10px">🏨</button>
+        ` : ``}
+
+        <span onclick="sellAsset(${i},${a})" style="cursor:pointer;color:red">❌</span>
+      </div>
+      `
+
+    }).join('')
+
+    return `
+    <div class="player-card ${i===currentPlayerIdx?'active':''} ${p.isBankrupt?'bankrupt':''}">
+      <strong>${p.icon} ${p.name} ${p.isBot?'(MÁY)':''}</strong><br>
+      💰 ${p.money.toLocaleString()}đ
+      <div style="font-size:10px;margin-top:5px">
+        ${assetsHTML}
+      </div>
+    </div>
+    `
+
+  }).join('')
+
+}
+function buildHotel(pIdx, landId){
+
+  const p = players[pIdx]
+  const land = cells[landId]
+
+  if(!p.houses[landId] || p.houses[landId] != 4){
+    alert("Cần đúng 4 nhà trước khi xây khách sạn")
+    return
+  }
+
+  if(p.money < land.hotelPrice){
+    alert("Không đủ tiền")
+    return
+  }
+
+  p.money -= land.hotelPrice
+  p.houses[landId] = 5
+
+  updateHouses()
+  updateUI()
+}
+</script>
+</body>
+</html>
